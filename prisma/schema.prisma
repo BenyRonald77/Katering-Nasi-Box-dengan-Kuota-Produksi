@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model BahanBaku {
+  id         String      @id @default(cuid())
+  nama       String
+  satuan     String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  resepItems ResepItem[]
+}
+
+model Menu {
+  id                 String       @id @default(cuid())
+  nama               String
+  harga              Float
+  kuotaDefaultHarian Int
+  aktif              Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  resepItems         ResepItem[]
+  dailyQuotas        DailyQuota[]
+  orderItems         OrderItem[]
+}
+
+model ResepItem {
+  id             String    @id @default(cuid())
+  menuId         String
+  menu           Menu      @relation(fields: [menuId], references: [id])
+  bahanBakuId    String
+  bahanBaku      BahanBaku @relation(fields: [bahanBakuId], references: [id])
+  jumlahPerPorsi Float
+
+  @@unique([menuId, bahanBakuId])
+}
+
+// tanggal disimpan sebagai DateTime jam 00:00:00 (date-only, dinormalisasi di lib/date.ts)
+model DailyQuota {
+  id            String   @id @default(cuid())
+  menuId        String
+  menu          Menu     @relation(fields: [menuId], references: [id])
+  tanggal       DateTime
+  kuotaMaksimal Int
+  kuotaTerpakai Int      @default(0)
+
+  @@unique([menuId, tanggal])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  nama      String
+  telepon   String
+  alamat    String
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+// status: "DIPESAN" | "DIBATALKAN"
+model Order {
+  id           String      @id @default(cuid())
+  customerId   String
+  customer     Customer    @relation(fields: [customerId], references: [id])
+  tanggalKirim DateTime
+  status       String      @default("DIPESAN")
+  totalHarga   Float
+  createdAt    DateTime    @default(now())
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id            String @id @default(cuid())
+  orderId       String
+  order         Order  @relation(fields: [orderId], references: [id])
+  menuId        String
+  menu          Menu   @relation(fields: [menuId], references: [id])
+  namaSnapshot  String
+  hargaSnapshot Float
+  porsi         Int
+  subtotal      Float
+}
